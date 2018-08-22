@@ -21,6 +21,12 @@ const login = async(page) => {
     });
 }
 
+const getData = async(page) => {
+    let $ = cheerio.load(await page.content());
+
+    return $('#content > table:nth-child(6) > tbody > tr:nth-child(3) > td:nth-child(2) > a').text()
+}
+
 
 
 (async() => {
@@ -31,9 +37,9 @@ const login = async(page) => {
     page.goto('http://www.mims.com/india/browse/alphabet/a?cat=drug', { timeout: 0 })
     await page.waitForNavigation({ timeout: 0 });
 
-    // let $ = cheerio.load(body);
+    let data = await getData(page)
 
-    console.log(await page.content());
+    console.log(data)
 
     await browser.close();
 })();
