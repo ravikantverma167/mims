@@ -28,7 +28,7 @@ const login = async(page) => {
     const page = await browser.newPage();
     await login(page);
 
-    page.goto('http://www.mims.com/india/browse/alphabet/a?cat=drug')
+    page.goto('http://www.mims.com/india/browse/alphabet/a?cat=drug', { timeout: 0 })
     await page.waitForNavigation({ timeout: 0 });
 
     // let $ = cheerio.load(body);
