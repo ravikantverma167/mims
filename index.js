@@ -1,9 +1,11 @@
 const puppeteer = require('puppeteer');
+const cheerio = require('cheerio')
 
-(async() => {
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
-    await page.goto('http:/www.mims.com/india');
+
+const login = async(page) => {
+
+    await page.setViewport({ width: 1920, height: 926 });
+    await page.goto('http://www.mims.com/india');
     await page.click('#authsection > div.signinlink > a');
     await page.waitForNavigation();
 
@@ -11,10 +13,27 @@ const puppeteer = require('puppeteer');
     await page.type('#Password', 'Isha@123');
     await page.click('#btnSubmit');
     await page.waitForNavigation();
-    // await page.screenshot({path: 'screenshot.png'});
-    // await page.waitForNavigation();
+
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            resolve(page)
+        }, 10000)
+    });
+}
+
+
+
+(async() => {
+    const browser = await puppeteer.launch({ headless: false });
+    const page = await browser.newPage();
+    await login(page);
+
+    page.goto('http://www.mims.com/india/browse/alphabet/a?cat=drug')
+    await page.waitForNavigation({ timeout: 0 });
+
+    // let $ = cheerio.load(body);
+
     console.log(await page.content());
-    await page.screenshot({ path: 'screenshot.png' });
 
     await browser.close();
 })();
