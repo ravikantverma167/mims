@@ -1,98 +1,49 @@
 const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
-var request = require('request');
 var csv = require('fast-csv');
 const fs = require("fs")
 
 const rootUrl = 'http://www.mims.com/'
+
+const click = async (selector, page) => {
+
+    return Promise.all([
+        page.waitForNavigation({
+            timeout: 0
+        }),
+        page.click(selector)
+    ]);
+
+}
+
+const open = async (url, page) => {
+    await page.goto(url, {
+        timeout: 0
+    });
+
+    // await page.waitForNavigation({
+    //     timeout: 0
+    // });
+}
+
+
+const set = async (selector, value, page) => {
+    const name = await page.waitForSelector(selector);
+    await name.type(value)
+    await page.waitFor(3000)
+}
 
 const login = async (page) => {
     await page.setViewport({
         width: 1520,
         height: 926
     });
-    await page.goto('http://www.mims.com/india', {
-        timeout: 0
-    });
-    await page.click('#authsection > div.signinlink > a', {
-        timeout: 0
-    });
-    await page.waitForNavigation();
-
-    await page.type('#EmailAddress', 'isha131722@gmail.com');
-    await page.type('#Password', 'Isha@123');
-    await page.click('#btnSubmit', {
-        timeout: 0
-    });
-    await page.waitForNavigation();
-    return new Promise((resolve, reject) => {
-        setTimeout(() => {
-            resolve(page)
-        }, 5000)
-    });
-}
-
-
-
-
-const extractData = async (row) => {
-    row = row.substring(1, row.length - 1)
-    let $ = cheerio.load(row)
-    let urls = []
-
-    let items = []
-    let tags = $('td > a')
-    $(tags).each((index, element) => {
-        urls.push('https://www.mims.com/' + $(element).attribs.href)
-    })
-    // let html = await getHtml(url)
-    for (let url of urls) {
-        let html = await getHtml(url)
-        let data = await extractDrugInfo(html)
-        items.push(data)
-    }
-
-    return items
-
-}
-
-
-const getList = async (html) => {
-    const tableSelector = '#content > table.tblBrowse > tbody > tr'
-
-    const $ = cheerio.load(html)
-
-
-    let items = []
-
-    let rows = []
-
-    $(tableSelector).each((index, element) => {
-        rows.push($(element).html())
-    })
-
-
-    let count = 0
-    for (let row of rows) {
-        // count++
-        let list = await extractData(row)
-        list.forEach(data => items.push(data))
-        console.log(items)
-        // if (count == 10) {
-        //     break
-        // }
-    }
-
-    return items
-    // console.log(items[0])
-}
-
-const getData = async (content) => {
-    let $ = cheerio.load(content);
-    let html = await getHtml(content);
-    let list = await getList(html);
-
-    return $('#content > table:nth-child(6) > tbody > tr:nth-child(3) > td:nth-child(2) > a').text()
+    await open('http://www.mims.com/india', page);
+    await click('#authsection > div.signinlink > a', page)
+    await set('#EmailAddress', 'isha131722@gmail.com', page)
+    await set('#Password', 'Isha@123', page)
+    await click('#btnSubmit', page)
+    console.log('logged in')
 }
 
 const saveData = async (items) => {
@@ -111,37 +62,45 @@ const saveData = async (items) => {
     })
 }
 
-const extractItemFromPage = async(content) =>{
+const extractItemFromPage = async (content) => {
+    let $ = cheerio.load(content)
     let item = {};
+    let name_selector = '#tdMonoTop > div:nth-child(2) > h1 > span:nth-child(2)'
+    name = $(name_selector)
+    data_selactor = '#tbMonoCenter > tbody > tr > td.outline-all > span'
+    let data = $(data_selactor)
 
-    // TODO - 2:
-
-    return item;
+    keySelector = '#tbMonoCenter > tbody > tr > td.outline > span'
+    let key = $(keySelector)
+    if (key === 'Manufacturer') {
+        manufacturer = $(data[0]).text()
+    }
+    Active_Ingredients = $(data[1]).text(),
+        manufacturer = $(data[0]).text(),
+        Administration / Uses = $(data[0]).text()
+    console.log(Active_Ingredients, manufacturer);
+    return {
+        Active_Ingredients: $(data[1]).text(),
+        manufacturer: $(data[0]).text()
+    }
 }
 
-const getDataFromDetailPage = async (url, page) => {
-    await page.goto(`${rootUrl}/${url}`, {
-        timeout: 0
-    });
-    await page.waitForNavigation({
-        timeout: 0
-    });
+const getDataFromDetailPage = async (selector, page) => {
+    await click(selector, page)
     let content = await page.content();
-
     return extractItemFromPage(content)
-
 }
 
 const getFromPage = async (content, page) => {
-    let urlSelector = '#content > table:nth-child(6) > tbody > tr > td > a'
-    let urls = []
+    let selectors = []
     let items = []
-    // TODO - 1 get urls of deatild page
-    $(urlSelector).each((index, element) => {
-        urls.push(`${rootUrl}` + $(element)[0].attribs.href)
-    })
-    for (let url of urls) {
-        items.push(await getDataFromDetailPage(url, page))
+    // TODO review 10
+    for (let rowNo = 1; rowNo <= 40; rowNo++) {
+        selectors.push(`#content > table:nth-child(6) > tbody > tr:nth-child(${rowNo + 2}) > td:nth-child(2) > a`)
+    }
+
+    for (let selector of selectors) {
+        items.push(await getDataFromDetailPage(selector, page))
     }
     return items;
 }
@@ -153,12 +112,7 @@ const doesNextPageExist = async (content) => {
 
 
 const getFromAlpahbet = async (char, no, page) => {
-    await page.goto(`${rootUrl}/india/browse/alphabet/${char}?cat=drug&tab=brand&page=${no}`, {
-        timeout: 0
-    });
-// await page.waitForNavigation({
-//         timeout: 0
-//     });
+    await open(`${rootUrl}/india/browse/alphabet/${char}?cat=drug&tab=brand&page=${no}`, page)
     let content = await page.content();
 
     let items = await getFromPage(content, page);
@@ -175,11 +129,12 @@ const getFromAlpahbet = async (char, no, page) => {
 
 (async () => {
     const browser = await puppeteer.launch({
-        headless: false
+        headless: false,
+        //  executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
     });
     const page = await browser.newPage();
     await login(page);
-    let data = await getFromAlpahbet('a', 1, page);
+    let data = await getFromAlpahbet('y', 3, page);
     console.log(data)
 
     await saveData(data);
