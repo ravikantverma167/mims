@@ -21,9 +21,9 @@ const open = async (url, page) => {
         timeout: 0
     });
 
-    // await page.waitForNavigation({
-    //     timeout: 0
-    // });
+    await page.waitForNavigation({
+        timeout: 0
+    });
 }
 
 
@@ -62,27 +62,65 @@ const saveData = async (items) => {
     })
 }
 
+const getText = async (selector, $) =>{
+    return $(valueSelector).text()
+}
+
+const extractValue = async(keySelector, valueSelector) =>{
+    // TODO if data does not exist
+    if(false) {
+        return null
+    }
+    return {
+        key:getText(keySelector, $),
+        value:  getText(valueSelector, $)
+    }
+}
+
 const extractItemFromPage = async (content) => {
     let $ = cheerio.load(content)
-    let item = {};
-    let name_selector = '#tdMonoTop > div:nth-child(2) > h1 > span:nth-child(2)'
-    name = $(name_selector)
-    data_selactor = '#tbMonoCenter > tbody > tr > td.outline-all > span'
-    let data = $(data_selactor)
+    let item = {
+        name: getText('#tdMonoTop > div:nth-child(2) > h1 > span:nth-child(2)', $)
+    };
+    for(let rowNo = 1; rowNo < 5; rowNo++) {
+        let data = extractValue(
+            `#tbMonoCenter > tbody > tr:nth-child(${rowNo}) > td.outline > span`
+            `#tbMonoCenter > tbody > tr:nth-child(${rowNo}) > td.outline-all > span > a > span > span`,
+            $
+        )
 
-    keySelector = '#tbMonoCenter > tbody > tr > td.outline > span'
-    let key = $(keySelector)
-    if (key === 'Manufacturer') {
-        manufacturer = $(data[0]).text()
+        if(data === null) {
+            break;
+        }
+
+        switch(data.key) {
+            case 'Manufacturer': 
+            item.manufacturer = data.value
+            break
+        }
     }
-    Active_Ingredients = $(data[1]).text(),
-        manufacturer = $(data[0]).text(),
-        Administration / Uses = $(data[0]).text()
-    console.log(Active_Ingredients, manufacturer);
-    return {
-        Active_Ingredients: $(data[1]).text(),
-        manufacturer: $(data[0]).text()
-    }
+
+    return item
+
+    // let name_selector = '#tdMonoTop > div:nth-child(2) > h1 > span:nth-child(2)'
+    // name = $(name_selector)
+
+    // data_selactor = '#tbMonoCenter > tbody > tr > td.outline-all > span'
+    // let data = $(data_selactor)
+
+    // keySelector = '#tbMonoCenter > tbody > tr > td.outline > span'
+    // let key = $(keySelector)
+    // if (key === 'Manufacturer') {
+    //     manufacturer = $(data[0]).text()
+    // }
+    // Active_Ingredients = $(data[1]).text(),
+    //     manufacturer = $(data[0]).text(),
+    //     Administration / Uses = $(data[0]).text()
+    // console.log(Active_Ingredients, manufacturer);
+    // return {
+    //     Active_Ingredients: $(data[1]).text(),
+    //     manufacturer: $(data[0]).text()
+    // }
 }
 
 const getDataFromDetailPage = async (selector, page) => {
