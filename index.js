@@ -17,13 +17,14 @@ const click = async (selector, page) => {
 }
 
 const open = async (url, page) => {
-    await page.goto(url, {
-        timeout: 0
-    });
-
-    await page.waitForNavigation({
-        timeout: 0
-    });
+    return Promise.all[
+        page.goto(url, {
+            timeout: 0
+        })
+        // page.waitForNavigation({
+        //     timeout: 0
+        // })
+    ]
 }
 
 
@@ -38,7 +39,10 @@ const login = async (page) => {
         width: 1520,
         height: 926
     });
-    await open('http://www.mims.com/india', page);
+    await page.goto('http://www.mims.com/india', {
+        timeout: 0
+    });
+   // await open('http://www.mims.com/india', page);
     await click('#authsection > div.signinlink > a', page)
     await set('#EmailAddress', 'isha131722@gmail.com', page)
     await set('#Password', 'Isha@123', page)
