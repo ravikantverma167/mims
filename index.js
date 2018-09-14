@@ -70,7 +70,7 @@ const saveCurrent = async () => {
 
 const addItem = async (item) => {
     current.items.push(item);
-    if (current.items.length >= 45) {
+    if (current.items.length >= 100) {
         await saveData()
     }
 }
@@ -99,7 +99,7 @@ const saveData = async () => {
 
 const click = async (selector, page, waitFor) => {
     // console.log("click")
-    await page.click(selector)
+    await page.click(selector, { timeout: 0 })
     // .then((data) => {
     //     return page.waitForNavigation({
     //         timeout: 0
@@ -112,9 +112,7 @@ const click = async (selector, page, waitFor) => {
 const open = async (url, page) => {
     // console.log("open")
 
-    await page.goto(url, {
-        timeout: 0
-    })
+    await page.goto(url, { timeout: 0 })
     // page.waitForNavigation({
     //     timeout: 0
     // })
@@ -195,15 +193,11 @@ const extractItemFromPage = async (page) => {
 }
 
 const getDataFromDetailPage = async (selector, page) => {
-    try {
-        await click(selector, page, "#Head1")
-        return extractItemFromPage(page)
-    } catch (err) {
-        console.log(err)
-        return {
-            row: `${current.pageNo}-${current.itemNo}`
-        }
-    }
+
+    await click(selector, page, "#Head1")
+    return extractItemFromPage(page)
+
+
 }
 
 const getFromPage = async (content, page) => {
@@ -257,49 +251,49 @@ const getFromAlpahbet = async (char, no, page) => {
 }
 
 const extractAlpha = async (page) => {
-    try {
-        await getFromAlpahbet(current.alphabet, current.pageNo, page);
-    } catch (ex) {
-        console.log(ex)
+    await getFromAlpahbet(current.alphabet, current.pageNo, page);
+}
+
+const fetchAlphabets = async (page) => {
+    await getCurrent();
+    let alphas = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
+    for (let index = current.index; index < alphas.length; index++) {
+        current.index = index;
+        current.alphabet = alphas[index];
+        if (current.continue) {
+            current.continue = false
+        } else {
+            current.pageNo = 1;
+        }
+
+        await extractAlpha(page)
+    }
+
+    if (current.items.length != 0) {
         await saveData()
-        extractAlpha(page)
+    }
+}
+
+const start = async () => {
+    const browser = await puppeteer.launch({
+        headless: false,
+        //  executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+        args: ['--unlimited-storage', '--full-memory-crash-report']
+    });
+    const page = await browser.newPage();
+    try {
+        await login(page);
+        await fetchAlphabets(page)
+    } catch (err) {
+        await browser.close();
+        console.log(err)
+        await saveCurrent()
+        await start()
     }
 }
 
 (async () => {
-    await getCurrent();
-
-    const browser = await puppeteer.launch({
-        headless: false,
-        //  executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
-    });
-    const page = await browser.newPage();
-    await login(page);
-
-    try {
-
-        let alphas = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
-        for (let index = current.index; index < alphas.length; index++) {
-            current.index = index;
-            current.alphabet = alphas[index];
-            if (current.continue) {
-                current.continue = false
-            } else {
-                current.pageNo = 1;
-            }
-
-            await extractAlpha(page)
-        }
-
-        if (current.items.length != 0) {
-            await saveData()
-        }
-    } catch (err) {
-        console.log(err)
-        saveCurrent()
-    }
-
-    await browser.close();
+    await start()
 })();
 
 
